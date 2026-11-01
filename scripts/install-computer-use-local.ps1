@@ -4235,11 +4235,19 @@ function Invoke-CuaRuntimeProxyRepair {
   foreach ($entry in @($entries | Select-Object -Unique)) {
     $request = @{ entryPath = $entry; proxyUrl = $proxy; verifyOnly = [bool]$VerifyOnly; backupRoot = (Join-Path $CodexHomeRoot 'backups\cua-runtime-proxy') }
     $oldPreference = $ErrorActionPreference
+    $oldOutputEncoding = $OutputEncoding
+    $oldConsoleOutputEncoding = [Console]::OutputEncoding
     try {
       $ErrorActionPreference = 'Continue'
+      $OutputEncoding = [Text.UTF8Encoding]::new($false)
+      [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
       $output = @((ConvertTo-Json -InputObject $request -Compress) | & $RuntimeInventory.NodePath $patcher 2>&1)
       $exitCode = $LASTEXITCODE
-    } finally { $ErrorActionPreference = $oldPreference }
+    } finally {
+      $OutputEncoding = $oldOutputEncoding
+      [Console]::OutputEncoding = $oldConsoleOutputEncoding
+      $ErrorActionPreference = $oldPreference
+    }
     $detail = ($output | ForEach-Object { [string]$_ }) -join [Environment]::NewLine
     if ($exitCode -ne 0) { throw "CUA runtime proxy repair/verification failed: $detail" }
     $result = $detail | ConvertFrom-Json
